@@ -2,11 +2,14 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
+using NganHangPhanTan.Core;
+
 
 namespace NganHangPhanTan
 {
     public partial class frmNhanVien : Form
     {
+        private DataTable _dtNhanVien;
         public frmNhanVien()
         {
             InitializeComponent();
@@ -19,82 +22,159 @@ namespace NganHangPhanTan
 
         private void frmNhanVien_Load(object sender, EventArgs e)
         {
-            cbPhai.Items.AddRange(new string[] { "Nam", "Nữ" });
-            LoadChiNhanh();
+            cbPhai.Items.AddRange(new[] { "Nam", "Nữ" });
+            LoadChiNhanhTheoRole();
             LoadNhanVien();
-            dgvNhanVien.CellClick += dgvNhanVien_CellContentClick;
         }
-        private void LoadChiNhanh()
+        private void LoadChiNhanhTheoRole()
         {
-            string query = "SELECT MACN, TENCN FROM ChiNhanh";
-            SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            cbMaCN.DataSource = dt;
-            cbMaCN.DisplayMember = "TENCN";
-            cbMaCN.ValueMember = "MACN";
-
-            if (Connection.chiNhanh != "TONGHOP")
-                cbMaCN.SelectedValue = Connection.chiNhanh;
+            try
+            {
+                if (RoleHelper.IsNganHang)
+                {
+                    var tb = DB.Query("SELECT MACN, TENCN FROM ChiNhanh ORDER BY MACN", CommandType.Text);
+                    cbMaCN.DataSource = tb;
+                    cbMaCN.DisplayMember = "MACN";
+                    cbMaCN.ValueMember = "MACN";
+                    cbMaCN.Enabled = true;
+                }
+                else
+                {
+                    cbMaCN.Items.Clear();
+                    cbMaCN.Items.Add(Session.ChiNhanhHienTai);
+                    cbMaCN.SelectedIndex = 0;
+                    cbMaCN.Enabled = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải chi nhánh: " + ex.Message);
+            }
         }
 
         private void LoadNhanVien()
         {
-            string query = "SELECT MANV, HO, TEN, DIACHI, CMND, PHAI, SODT, MACN FROM NhanVien WHERE TrangThaiXoa = 0";
-            SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            dgvNhanVien.DataSource = dt;
+            try
+            {
+                string sql = @"SELECT MANV, HO, TEN, DIACHI, CMND, PHAI, SODT, MACN 
+                               FROM NhanVien WHERE TrangThaiXoa = 0 ORDER BY HO, TEN";
+                _dtNhanVien = DB.Query(sql, CommandType.Text);
+                dgvNhanVien.DataSource = _dtNhanVien;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải nhân viên: " + ex.Message);
+            }
+        }
+        private bool ValidateInput()
+        {
+            if (string.IsNullOrWhiteSpace(txtMaNV.Text))
+            {
+                MessageBox.Show("Mã nhân viên không được để trống!"); return false;
+            }
+            if (string.IsNullOrWhiteSpace(txtHo.Text) || string.IsNullOrWhiteSpace(txtTen.Text))
+            {
+                MessageBox.Show("Họ tên nhân viên không được để trống!"); return false;
+            }
+            if (string.IsNullOrWhiteSpace(txtCMND.Text))
+            {
+                MessageBox.Show("CMND không được để trống!"); return false;
+            }
+            if (cbPhai.SelectedIndex == -1)
+            {
+                MessageBox.Show("Vui lòng chọn giới tính!"); return false;
+            }
+            if (!long.TryParse(txtSDT.Text, out _))
+            {
+                MessageBox.Show("Số điện thoại phải là số!"); return false;
+            }
+            return true;
         }
 
         private void btnThem_Click(object sender, EventArgs e)
         {
-            string query = "INSERT INTO NhanVien (MANV, HO, TEN, DIACHI, CMND, PHAI, SODT, MACN) VALUES (@manv, @ho, @ten, @diachi, @cmnd, @phai, @sdt, @macn)";
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
+            if (!ValidateInput()) return;
+
+            try
             {
-                cmd.Parameters.AddWithValue("@manv", txtMaNV.Text);
-                cmd.Parameters.AddWithValue("@ho", txtHo.Text);
-                cmd.Parameters.AddWithValue("@ten", txtTen.Text);
-                cmd.Parameters.AddWithValue("@diachi", txtDiaChi.Text);
-                cmd.Parameters.AddWithValue("@cmnd", txtCMND.Text);
-                cmd.Parameters.AddWithValue("@phai", cbPhai.Text);
-                cmd.Parameters.AddWithValue("@sdt", txtSDT.Text);
-                cmd.Parameters.AddWithValue("@macn", cbMaCN.SelectedValue.ToString());
-                cmd.ExecuteNonQuery();
+                string sql = @"INSERT INTO NhanVien(MANV, HO, TEN, DIACHI, CMND, PHAI, SODT, MACN, TrangThaiXoa)
+                               VALUES(@MANV, @HO, @TEN, @DIACHI, @CMND, @PHAI, @SODT, @MACN, 0)";
+                DB.Query(sql, CommandType.Text,
+                    new SqlParameter("@MANV", txtMaNV.Text.Trim()),
+                    new SqlParameter("@HO", txtHo.Text.Trim()),
+                    new SqlParameter("@TEN", txtTen.Text.Trim()),
+                    new SqlParameter("@DIACHI", txtDiaChi.Text.Trim()),
+                    new SqlParameter("@CMND", txtCMND.Text.Trim()),
+                    new SqlParameter("@PHAI", cbPhai.Text),
+                    new SqlParameter("@SODT", txtSDT.Text.Trim()),
+                    new SqlParameter("@MACN", cbMaCN.Text.Trim())
+                );
+
+                MessageBox.Show("✅ Đã thêm nhân viên mới!");
+                LoadNhanVien();
             }
-            LoadNhanVien();
-            MessageBox.Show("✅ Đã thêm nhân viên mới!");
+            catch (SqlException ex)
+            {
+                MessageBox.Show("Lỗi SQL: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi thêm nhân viên: " + ex.Message);
+            }
         }
 
         private void btnXoa_Click(object sender, EventArgs e)
         {
-            string query = "UPDATE NhanVien SET TrangThaiXoa = 1 WHERE MANV=@manv";
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
+            if (string.IsNullOrWhiteSpace(txtMaNV.Text))
             {
-                cmd.Parameters.AddWithValue("@manv", txtMaNV.Text);
-                cmd.ExecuteNonQuery();
+                MessageBox.Show("Vui lòng chọn nhân viên cần xóa!");
+                return;
             }
-            LoadNhanVien();
-            MessageBox.Show("🗑️ Nhân viên đã được xóa (ẩn).");
+
+            if (MessageBox.Show("Xác nhận xóa nhân viên này?", "Cảnh báo",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                return;
+
+            try
+            {
+                DB.Query("UPDATE NhanVien SET TrangThaiXoa = 1 WHERE MANV=@MANV",
+                    CommandType.Text, new SqlParameter("@MANV", txtMaNV.Text.Trim()));
+
+                MessageBox.Show("🗑️ Nhân viên đã được ẩn (TrangThaiXoa = 1)");
+                LoadNhanVien();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi xóa nhân viên: " + ex.Message);
+            }
         }
 
         private void btnGhi_Click(object sender, EventArgs e)
         {
-            string query = "UPDATE NhanVien SET HO=@ho, TEN=@ten, DIACHI=@diachi, CMND=@cmnd, PHAI=@phai, SODT=@sdt, MACN=@macn WHERE MANV=@manv";
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
+            if (!ValidateInput()) return;
+
+            try
             {
-                cmd.Parameters.AddWithValue("@manv", txtMaNV.Text);
-                cmd.Parameters.AddWithValue("@ho", txtHo.Text);
-                cmd.Parameters.AddWithValue("@ten", txtTen.Text);
-                cmd.Parameters.AddWithValue("@diachi", txtDiaChi.Text);
-                cmd.Parameters.AddWithValue("@cmnd", txtCMND.Text);
-                cmd.Parameters.AddWithValue("@phai", cbPhai.Text);
-                cmd.Parameters.AddWithValue("@sdt", txtSDT.Text);
-                cmd.Parameters.AddWithValue("@macn", cbMaCN.SelectedValue.ToString());
-                cmd.ExecuteNonQuery();
+                string sql = @"UPDATE NhanVien SET HO=@HO, TEN=@TEN, DIACHI=@DC, CMND=@CMND, 
+                               PHAI=@P, SODT=@SDT, MACN=@MACN WHERE MANV=@MANV";
+                DB.Query(sql, CommandType.Text,
+                    new SqlParameter("@MANV", txtMaNV.Text.Trim()),
+                    new SqlParameter("@HO", txtHo.Text.Trim()),
+                    new SqlParameter("@TEN", txtTen.Text.Trim()),
+                    new SqlParameter("@DC", txtDiaChi.Text.Trim()),
+                    new SqlParameter("@CMND", txtCMND.Text.Trim()),
+                    new SqlParameter("@P", cbPhai.Text),
+                    new SqlParameter("@SDT", txtSDT.Text.Trim()),
+                    new SqlParameter("@MACN", cbMaCN.Text.Trim())
+                );
+
+                MessageBox.Show("💾 Cập nhật thông tin nhân viên thành công!");
+                LoadNhanVien();
             }
-            LoadNhanVien();
-            MessageBox.Show("💾 Dữ liệu nhân viên đã cập nhật!");
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi cập nhật nhân viên: " + ex.Message);
+            }
         }
 
         private void btnPhucHoi_Click(object sender, EventArgs e)
@@ -104,102 +184,36 @@ namespace NganHangPhanTan
 
         private void btnChuyenCN_Click(object sender, EventArgs e)
         {
-            // ✅ Lấy thông tin nhân viên hiện tại từ form
+            if (string.IsNullOrWhiteSpace(txtMaNV.Text) || cbMaCN.SelectedIndex == -1)
+            {
+                MessageBox.Show("Vui lòng chọn nhân viên và chi nhánh đích!");
+                return;
+            }
+
             string maNV = txtMaNV.Text.Trim();
-            string ho = txtHo.Text.Trim();
-            string ten = txtTen.Text.Trim();
-            string diaChi = txtDiaChi.Text.Trim();
-            string cmnd = txtCMND.Text.Trim();
-            string phai = cbPhai.Text.Trim();
-            string sdt = txtSDT.Text.Trim();
+            string maCNMoi = cbMaCN.Text.Trim();
 
-            string maCNHienTai = Connection.chiNhanh;
-            string maCNMoi = cbMaCN.SelectedValue.ToString().Trim();
-
-            // --- Kiểm tra ---
-            if (string.IsNullOrEmpty(maNV))
-            {
-                MessageBox.Show("Vui lòng chọn nhân viên cần chuyển!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (MessageBox.Show($"Xác nhận chuyển nhân viên {maNV} sang chi nhánh {maCNMoi}?",
+                "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
                 return;
-            }
-            if (string.IsNullOrEmpty(maCNMoi))
-            {
-                MessageBox.Show("Vui lòng chọn chi nhánh cần chuyển đến!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            if (maCNMoi == maCNHienTai)
-            {
-                MessageBox.Show("Nhân viên đang ở chi nhánh này rồi!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            // --- Xác nhận ---
-            DialogResult dr = MessageBox.Show(
-                $"Bạn có chắc chắn muốn chuyển nhân viên {maNV} sang chi nhánh {maCNMoi}?",
-                "Xác nhận chuyển chi nhánh",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
-            if (dr == DialogResult.No) return;
 
             try
             {
-                // ✅ 1. Kết nối tới chi nhánh mới
-                using (SqlConnection connMoi = Program.GetConnectionForBranch(maCNMoi))
-                {
-                    connMoi.Open();
+                DB.Exec("sp_ChuyenNhanVien",
+                    new SqlParameter("@MANV", maNV),
+                    new SqlParameter("@MACN_MOI", maCNMoi)
+                );
 
-                    // Kiểm tra trùng mã nhân viên bên chi nhánh mới
-                    string checkQuery = "SELECT COUNT(*) FROM NhanVien WHERE MANV = @MANV";
-                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, connMoi))
-                    {
-                        checkCmd.Parameters.AddWithValue("@MANV", maNV);
-                        int exists = (int)checkCmd.ExecuteScalar();
-
-                        if (exists > 0)
-                        {
-                            MessageBox.Show($"❌ Mã nhân viên {maNV} đã tồn tại ở chi nhánh {maCNMoi}.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-
-                    // ✅ 2. Thêm nhân viên vào chi nhánh mới
-                    string insertQuery = @"
-                INSERT INTO NhanVien (MANV, HO, TEN, DIACHI, CMND, PHAI, SODT, MACN, TrangThaiXoa)
-                VALUES (@MANV, @HO, @TEN, @DIACHI, @CMND, @PHAI, @SODT, @MACN, 0)";
-                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, connMoi))
-                    {
-                        insertCmd.Parameters.AddWithValue("@MANV", maNV);
-                        insertCmd.Parameters.AddWithValue("@HO", ho);
-                        insertCmd.Parameters.AddWithValue("@TEN", ten);
-                        insertCmd.Parameters.AddWithValue("@DIACHI", diaChi);
-                        insertCmd.Parameters.AddWithValue("@CMND", cmnd);
-                        insertCmd.Parameters.AddWithValue("@PHAI", phai);
-                        insertCmd.Parameters.AddWithValue("@SODT", sdt);
-                        insertCmd.Parameters.AddWithValue("@MACN", maCNMoi);
-                        insertCmd.ExecuteNonQuery();
-                    }
-
-                    connMoi.Close();
-                }
-
-                // ✅ 3. Đánh dấu đã chuyển (ẩn nhân viên ở CN hiện tại)
-                string updateQuery = "UPDATE NhanVien SET TrangThaiXoa = 1 WHERE MANV=@MANV";
-                using (SqlCommand cmd = new SqlCommand(updateQuery, Connection.currentConn))
-                {
-                    cmd.Parameters.AddWithValue("@MANV", maNV);
-                    cmd.ExecuteNonQuery();
-                }
-
+                MessageBox.Show($"✅ Nhân viên {maNV} đã được chuyển sang chi nhánh {maCNMoi}!");
                 LoadNhanVien();
-
-                MessageBox.Show($"✅ Nhân viên {maNV} đã được chuyển sang chi nhánh {maCNMoi} thành công!",
-                    "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show("Lỗi SQL: " + ex.Message);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ Lỗi khi chuyển chi nhánh:\n\n{ex.Message}",
-                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi chuyển nhân viên: " + ex.Message);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NganHangPhanTan.Core;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
@@ -19,31 +20,27 @@ namespace NganHangPhanTan
 
         private void frmMoTaiKhoan_Load(object sender, EventArgs e)
         {
-            LoadChiNhanh();
+            cbMaCN.Items.Clear();
+            LoadChiNhanhTheoRole();
             LoadKhachHang();
             LoadTaiKhoan();
         }
-        private void LoadChiNhanh()
+        private void LoadChiNhanhTheoRole()
         {
             try
             {
-                if (Connection.chiNhanh == "TONGHOP")
+                if (RoleHelper.IsNganHang)
                 {
-                    // Cho phép chọn chi nhánh (dữ liệu từ bảng ChiNhanh)
-                    string query = "SELECT MACN FROM ChiNhanh";
-                    SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    cbMaCN.DataSource = dt;
+                    var tb = DB.Query("SELECT MACN, TENCN FROM ChiNhanh ORDER BY MACN", CommandType.Text);
+                    cbMaCN.DataSource = tb;
                     cbMaCN.DisplayMember = "MACN";
                     cbMaCN.ValueMember = "MACN";
                     cbMaCN.Enabled = true;
                 }
                 else
                 {
-                    // Gán mã CN cố định
                     cbMaCN.Items.Clear();
-                    cbMaCN.Items.Add(Connection.chiNhanh);
+                    cbMaCN.Items.Add(Session.ChiNhanhHienTai);
                     cbMaCN.SelectedIndex = 0;
                     cbMaCN.Enabled = false;
                 }
@@ -53,51 +50,86 @@ namespace NganHangPhanTan
                 MessageBox.Show("Lỗi tải chi nhánh: " + ex.Message);
             }
         }
+        private DataTable _dtTaiKhoan;
 
-        // 🔹 Load danh sách khách hàng (CMND)
+
+
         private void LoadKhachHang()
         {
-            string query = "SELECT CMND FROM dbo.KhachHang";
-            SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            cbCMND.DataSource = dt;
-            cbCMND.DisplayMember = "CMND";
-            cbCMND.ValueMember = "CMND";
+            try
+            {
+                string sql = "SELECT CMND, HO + ' ' + TEN AS HoTen FROM KhachHang ORDER BY HO, TEN";
+                var tb = DB.Query(sql, CommandType.Text);
+                cbCMND.DataSource = tb;
+                cbCMND.DisplayMember = "CMND";
+                cbCMND.ValueMember = "CMND";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải khách hàng: " + ex.Message);
+            }
         }
 
         // 🔹 Load danh sách tài khoản
         private void LoadTaiKhoan()
         {
-            string query = "SELECT SOTK, CMND, SODU, MACN, NGAYMOTK FROM dbo.TaiKhoan";
-            SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            dgvTaiKhoan.DataSource = dt;
+            try
+            {
+                string sql = @"SELECT SOTK, CMND, SODU, MACN, NGAYMOTK 
+                               FROM TaiKhoan ORDER BY NGAYMOTK DESC";
+                _dtTaiKhoan = DB.Query(sql, CommandType.Text);
+                dgvTaiKhoan.DataSource = _dtTaiKhoan;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải tài khoản: " + ex.Message);
+            }
+        }
+        private bool ValidateInput()
+        {
+            if (string.IsNullOrWhiteSpace(txtSoTK.Text))
+            {
+                MessageBox.Show("Số tài khoản không được để trống!"); return false;
+            }
+            if (cbCMND.SelectedIndex < 0)
+            {
+                MessageBox.Show("Vui lòng chọn khách hàng hợp lệ!"); return false;
+            }
+            if (!decimal.TryParse(txtSoDu.Text, out decimal sodu))
+            {
+                MessageBox.Show("Số dư phải là số!"); return false;
+            }
+            if (sodu < 100000)
+            {
+                MessageBox.Show("Số dư tối thiểu phải >= 100.000 VNĐ!"); return false;
+            }
+            return true;
         }
 
         private void btnThem_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtSoTK.Text))
-            {
-                MessageBox.Show("Vui lòng nhập số tài khoản!");
-                return;
-            }
+            if (!ValidateInput()) return;
 
-            string query = "INSERT INTO TaiKhoan (SOTK, CMND, SODU, MACN, NGAYMOTK) " +
-                           "VALUES (@sotk, @cmnd, @sodu, @macn, @ngaymo)";
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
+            try
             {
-                cmd.Parameters.AddWithValue("@sotk", txtSoTK.Text);
-                cmd.Parameters.AddWithValue("@cmnd", cbCMND.Text);
-                cmd.Parameters.AddWithValue("@sodu", Convert.ToDecimal(txtSoDu.Text));
-                cmd.Parameters.AddWithValue("@macn", cbMaCN.Text);
-                cmd.Parameters.AddWithValue("@ngaymo", dtpNgayMo.Value);
-                cmd.ExecuteNonQuery();
-            }
+                DB.Exec("sp_MoTaiKhoan",
+                    new SqlParameter("@SOTK", txtSoTK.Text.Trim()),
+                    new SqlParameter("@CMND", cbCMND.Text.Trim()),
+                    new SqlParameter("@SODU", Convert.ToDecimal(txtSoDu.Text)),
+                    new SqlParameter("@MACN", cbMaCN.Text.Trim())
+                );
 
-            LoadTaiKhoan();
-            MessageBox.Show("✅ Đã mở tài khoản thành công!");
+                MessageBox.Show("✅ Đã mở tài khoản thành công!");
+                LoadTaiKhoan();
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show("Lỗi SQL: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi thêm tài khoản: " + ex.Message);
+            }
         }
 
         private void btnXoa_Click(object sender, EventArgs e)
@@ -108,32 +140,48 @@ namespace NganHangPhanTan
                 return;
             }
 
-            string query = "DELETE FROM TaiKhoan WHERE SOTK = @sotk";
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
-            {
-                cmd.Parameters.AddWithValue("@sotk", txtSoTK.Text);
-                cmd.ExecuteNonQuery();
-            }
+            if (MessageBox.Show("Xác nhận xóa tài khoản này?", "Cảnh báo",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                return;
 
-            LoadTaiKhoan();
-            MessageBox.Show("🗑️ Đã xóa tài khoản!");
+            try
+            {
+                DB.Query("DELETE FROM TaiKhoan WHERE SOTK=@SOTK",
+                    CommandType.Text,
+                    new SqlParameter("@SOTK", txtSoTK.Text.Trim()));
+                MessageBox.Show("🗑️ Đã xóa tài khoản!");
+                LoadTaiKhoan();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi xóa tài khoản: " + ex.Message);
+            }
         }
 
         private void btnGhi_Click(object sender, EventArgs e)
         {
-            string query = "UPDATE TaiKhoan SET CMND=@cmnd, SODU=@sodu, MACN=@macn, NGAYMOTK=@ngaymo WHERE SOTK=@sotk";
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
-            {
-                cmd.Parameters.AddWithValue("@sotk", txtSoTK.Text);
-                cmd.Parameters.AddWithValue("@cmnd", cbCMND.Text);
-                cmd.Parameters.AddWithValue("@sodu", Convert.ToDecimal(txtSoDu.Text));
-                cmd.Parameters.AddWithValue("@macn", cbMaCN.Text);
-                cmd.Parameters.AddWithValue("@ngaymo", dtpNgayMo.Value);
-                cmd.ExecuteNonQuery();
-            }
+            if (!ValidateInput()) return;
 
-            LoadTaiKhoan();
-            MessageBox.Show("💾 Đã cập nhật tài khoản!");
+            try
+            {
+                string sql = @"UPDATE TaiKhoan 
+                               SET CMND=@CMND, SODU=@SODU, MACN=@MACN, NGAYMOTK=@NGAYMOTK 
+                               WHERE SOTK=@SOTK";
+                DB.Query(sql, CommandType.Text,
+                    new SqlParameter("@SOTK", txtSoTK.Text.Trim()),
+                    new SqlParameter("@CMND", cbCMND.Text.Trim()),
+                    new SqlParameter("@SODU", Convert.ToDecimal(txtSoDu.Text)),
+                    new SqlParameter("@MACN", cbMaCN.Text.Trim()),
+                    new SqlParameter("@NGAYMOTK", dtpNgayMo.Value)
+                );
+
+                MessageBox.Show("💾 Cập nhật tài khoản thành công!");
+                LoadTaiKhoan();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi cập nhật tài khoản: " + ex.Message);
+            }
         }
 
         private void btnPhucHoi_Click(object sender, EventArgs e)

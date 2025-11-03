@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NganHangPhanTan.Core;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
@@ -7,38 +8,34 @@ namespace NganHangPhanTan
 {
     public partial class frmKhachHang : Form
     {
+        
         public frmKhachHang()
         {
             InitializeComponent();
         }
-
+        
         private void frmKhachHang_Load(object sender, EventArgs e)
         {
             cbPhai.Items.AddRange(new string[] { "Nam", "Nữ" });
-            LoadChiNhanhTheoPhanQuyen();
+            LoadChiNhanhTheoRole();
             LoadKhachHang();
         }
-        private void LoadChiNhanhTheoPhanQuyen()
+        private void LoadChiNhanhTheoRole()
         {
             try
             {
-                if (Connection.chiNhanh == "TONGHOP")
+                if (RoleHelper.IsNganHang)
                 {
-                    // Cho phép chọn chi nhánh (dữ liệu từ bảng ChiNhanh)
-                    string query = "SELECT MACN FROM ChiNhanh";
-                    SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    cbMaCN.DataSource = dt;
+                    var tb = DB.Query("SELECT MACN, TENCN FROM ChiNhanh ORDER BY MACN", CommandType.Text);
+                    cbMaCN.DataSource = tb;
                     cbMaCN.DisplayMember = "MACN";
                     cbMaCN.ValueMember = "MACN";
                     cbMaCN.Enabled = true;
                 }
                 else
                 {
-                    // Gán mã CN cố định
                     cbMaCN.Items.Clear();
-                    cbMaCN.Items.Add(Connection.chiNhanh);
+                    cbMaCN.Items.Add(Session.ChiNhanhHienTai);
                     cbMaCN.SelectedIndex = 0;
                     cbMaCN.Enabled = false;
                 }
@@ -48,34 +45,50 @@ namespace NganHangPhanTan
                 MessageBox.Show("Lỗi tải chi nhánh: " + ex.Message);
             }
         }
+        private DataTable _dtKhachHang;
 
         private void LoadKhachHang()
         {
-            string query = "SELECT * FROM dbo.KhachHang";
-            SqlDataAdapter da = new SqlDataAdapter(query, Connection.currentConn);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
+            try
+            {
+                string sql = @"SELECT CMND, HO, TEN, DIACHI, PHAI, NGAYCAP, SODT, MACN
+                       FROM KhachHang
+                       ORDER BY HO, TEN";
 
-            dgvKH.DataSource = dt;
-
-            // ✅ Xóa ràng buộc cũ (tránh trùng)
-            txtCMND.DataBindings.Clear();
-            txtHo.DataBindings.Clear();
-            txtTen.DataBindings.Clear();
-            txtDiaChi.DataBindings.Clear();
-            cbPhai.DataBindings.Clear();
-            txtSDT.DataBindings.Clear();
-            dtpNgayCap.DataBindings.Clear();
-
-            // ✅ Tạo ràng buộc mới
-            txtCMND.DataBindings.Add("Text", dt, "CMND");
-            txtHo.DataBindings.Add("Text", dt, "HO");
-            txtTen.DataBindings.Add("Text", dt, "TEN");
-            txtDiaChi.DataBindings.Add("Text", dt, "DIACHI");
-            cbPhai.DataBindings.Add("Text", dt, "PHAI");
-            txtSDT.DataBindings.Add("Text", dt, "SODT");
-            dtpNgayCap.DataBindings.Add("Value", dt, "NGAYCAP");
+                _dtKhachHang = DB.Query(sql, CommandType.Text);   // ✅ dùng đúng tên biến
+                dgvKH.AutoGenerateColumns = true;
+                dgvKH.DataSource = _dtKhachHang;                  // ✅ dùng đúng tên biến
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải khách hàng: " + ex.Message);
+            }
         }
+        private bool ValidateInput()
+        {
+            if (string.IsNullOrWhiteSpace(txtCMND.Text))
+            {
+                MessageBox.Show("CMND không được để trống!"); return false;
+            }
+            if (string.IsNullOrWhiteSpace(txtHo.Text) || string.IsNullOrWhiteSpace(txtTen.Text))
+            {
+                MessageBox.Show("Họ và tên không được để trống!"); return false;
+            }
+            if (!long.TryParse(txtSDT.Text, out _))
+            {
+                MessageBox.Show("Số điện thoại phải là số!"); return false;
+            }
+            if (cbPhai.SelectedIndex == -1)
+            {
+                MessageBox.Show("Vui lòng chọn giới tính!"); return false;
+            }
+            if (cbMaCN.SelectedIndex == -1)
+            {
+                MessageBox.Show("Vui lòng chọn chi nhánh!"); return false;
+            }
+            return true;
+        }
+
         private void label5_Click(object sender, EventArgs e)
         {
 
@@ -123,44 +136,53 @@ namespace NganHangPhanTan
 
         private void btnThem_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtCMND.Text))
+            if (!ValidateInput()) return;
+
+            try
             {
-                MessageBox.Show("Vui lòng nhập CMND!");
-                return;
+                DB.Exec("sp_ThemKhachHang",
+                    new SqlParameter("@CMND", txtCMND.Text.Trim()),
+                    new SqlParameter("@HO", txtHo.Text.Trim()),
+                    new SqlParameter("@TEN", txtTen.Text.Trim()),
+                    new SqlParameter("@DIACHI", txtDiaChi.Text.Trim()),
+                    new SqlParameter("@PHAI", cbPhai.Text),
+                    new SqlParameter("@NGAYCAP", dtpNgayCap.Value),
+                    new SqlParameter("@SODT", txtSDT.Text.Trim()),
+                    new SqlParameter("@MACN", cbMaCN.Text.Trim())
+                );
+
+                MessageBox.Show("✅ Thêm khách hàng thành công!");
+                LoadKhachHang();
             }
-
-            string query = "INSERT INTO KhachHang(CMND, HO, TEN, DIACHI, PHAI, NGAYCAP, SODT, MACN) " +
-                           "VALUES (@cmnd, @ho, @ten, @diachi, @phai, @ngaycap, @sdt, @macn)";
-
-            using (SqlCommand cmd = new SqlCommand(query, Connection.currentConn))
+            catch (SqlException ex)
             {
-                cmd.Parameters.AddWithValue("@cmnd", txtCMND.Text);
-                cmd.Parameters.AddWithValue("@ho", txtHo.Text);
-                cmd.Parameters.AddWithValue("@ten", txtTen.Text);
-                cmd.Parameters.AddWithValue("@diachi", txtDiaChi.Text);
-                cmd.Parameters.AddWithValue("@phai", cbPhai.Text);
-                cmd.Parameters.AddWithValue("@ngaycap", dtpNgayCap.Value);
-                cmd.Parameters.AddWithValue("@sdt", txtSDT.Text);
-                cmd.Parameters.AddWithValue("@macn", cbMaCN.Text);
-
-                cmd.ExecuteNonQuery();
+                // SP sẽ RAISERROR nếu CMND trùng hoặc mã CN sai
+                MessageBox.Show("SQL Error: " + ex.Message);
             }
-
-            LoadKhachHang(); // Nạp lại danh sách
-            MessageBox.Show("✅ Đã thêm khách hàng mới!");
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi thêm khách hàng: " + ex.Message);
+            }
         }
 
         private void btnXoa_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(txtCMND.Text))
+            {
+                MessageBox.Show("Vui lòng chọn khách hàng cần xóa!");
+                return;
+            }
+
+            if (MessageBox.Show("Xác nhận xóa khách hàng này?", "Cảnh báo",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                return;
+
             try
             {
-                string query = "DELETE FROM KhachHang WHERE CMND = @CMND";
-                SqlCommand cmd = new SqlCommand(query, Connection.currentConn);
-                cmd.Parameters.AddWithValue("@CMND", txtCMND.Text);
-                cmd.ExecuteNonQuery();
-
-                MessageBox.Show("Xóa khách hàng thành công!");
+                string sql = "DELETE FROM KhachHang WHERE CMND=@CMND";
+                DB.Query(sql, CommandType.Text, new SqlParameter("@CMND", txtCMND.Text.Trim()));
                 LoadKhachHang();
+                MessageBox.Show("🗑️ Xóa khách hàng thành công!");
             }
             catch (Exception ex)
             {
@@ -170,27 +192,30 @@ namespace NganHangPhanTan
 
         private void btnGhi_Click(object sender, EventArgs e)
         {
+            if (!ValidateInput()) return;
 
             try
             {
-                string query = "UPDATE KhachHang SET HO = @HO, TEN = @TEN, DIACHI = @DIACHI, " +
-                               "PHAI = @PHAI, NGAYCAP = @NGAYCAP, SODT = @SODT WHERE CMND = @CMND";
-                SqlCommand cmd = new SqlCommand(query, Connection.currentConn);
-                cmd.Parameters.AddWithValue("@CMND", txtCMND.Text);
-                cmd.Parameters.AddWithValue("@HO", txtHo.Text);
-                cmd.Parameters.AddWithValue("@TEN", txtTen.Text);
-                cmd.Parameters.AddWithValue("@DIACHI", txtDiaChi.Text);
-                cmd.Parameters.AddWithValue("@PHAI", cbPhai.Text);
-                cmd.Parameters.AddWithValue("@NGAYCAP", dtpNgayCap.Value);
-                cmd.Parameters.AddWithValue("@SODT", txtSDT.Text);
-                cmd.ExecuteNonQuery();
+                string sql = @"UPDATE KhachHang 
+                               SET HO=@HO, TEN=@TEN, DIACHI=@DC, PHAI=@P, NGAYCAP=@NC, SODT=@SDT 
+                               WHERE CMND=@CMND";
 
-                MessageBox.Show("Cập nhật thông tin khách hàng thành công!");
+                DB.Query(sql, CommandType.Text,
+                    new SqlParameter("@HO", txtHo.Text.Trim()),
+                    new SqlParameter("@TEN", txtTen.Text.Trim()),
+                    new SqlParameter("@DC", txtDiaChi.Text.Trim()),
+                    new SqlParameter("@P", cbPhai.Text),
+                    new SqlParameter("@NC", dtpNgayCap.Value),
+                    new SqlParameter("@SDT", txtSDT.Text.Trim()),
+                    new SqlParameter("@CMND", txtCMND.Text.Trim())
+                );
+
+                MessageBox.Show("💾 Cập nhật thông tin khách hàng thành công!");
                 LoadKhachHang();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật khách hàng: " + ex.Message);
+                MessageBox.Show("Lỗi cập nhật: " + ex.Message);
             }
         }
 

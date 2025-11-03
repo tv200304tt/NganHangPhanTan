@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NganHangPhanTan.Core;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -28,50 +29,29 @@ namespace NganHangPhanTan
 
         private void btnLogin_Click(object sender, EventArgs e)
         {
-
-            string user = txtUser.Text.Trim();
-            string pass = txtPass.Text.Trim();
-
-            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
+            try
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ User và Password!", "Thông báo");
-                return;
-            }
+                var dbKey = cbChiNhanh.SelectedItem.ToString();
+                DB.UseConnection(dbKey, txtUser.Text.Trim(), txtPass.Text);
 
-            if (cbChiNhanh.SelectedItem == null)
-            {
-                MessageBox.Show("Vui lòng chọn chi nhánh!", "Thông báo");
-                return;
-            }
+                // Test kết nối + lấy role
+                Session.LoginName = txtUser.Text.Trim();
+                Session.RoleName = RoleHelper.GetCurrentRole();
+                Session.ChiNhanhHienTai = dbKey.Replace("NGANHANG_", ""); // hiển thị
 
-            string chiNhanh = cbChiNhanh.SelectedItem.ToString();
+                if (Session.RoleName == "None")
+                    throw new Exception("Tài khoản chưa thuộc role nào (NganHang/ChiNhanh/KhachHang).");
 
-            // ✅ Kết nối 1 chi nhánh duy nhất
-            if (Connection.ConnectSingle(chiNhanh, user, pass))
-            {
-                // Gán biến toàn cục
-                Program.chiNhanh = chiNhanh;
-                Program.currentLogin = user;
-                Program.currentPass = pass;
-
-                // Lấy thông tin nhân viên (nếu có)
-                Program.LoadCurrentUserInfo();
-
-                // Hiện duy nhất 1 thông báo thành công
-                MessageBox.Show(
-                    $"✅ Đăng nhập thành công vào chi nhánh {chiNhanh}!\n\nXin chào {Program.currentUserName ?? "Người dùng"}",
-                    "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                // Mở menu chính
-                this.Hide();
+                // Mở main
                 new frmMainMenu().Show();
+                this.Hide();
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("❌ Đăng nhập thất bại! Vui lòng kiểm tra lại.", "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Đăng nhập thất bại:\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        
 
             private void btnExit_Click(object sender, EventArgs e)
         {

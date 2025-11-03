@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NganHangPhanTan.Core;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -27,39 +28,26 @@ namespace NganHangPhanTan
 
         private void menuKhachHang_Click(object sender, EventArgs e)
         {
-            frmKhachHang f = new frmKhachHang();
-            f.MdiParent = this;
-            f.StartPosition = FormStartPosition.Manual; // để tự canh giữa
-            f.Location = new Point(0, 0);
-            f.FormBorderStyle = FormBorderStyle.None;   // bỏ viền
-            f.Dock = DockStyle.Fill;                    // 👉 fill toàn vùng MDI
-            f.Show();
-
-            // Resize frmMainMenu để vừa khít form con (nếu cần)
-            this.ClientSize = f.Size;
+            new frmKhachHang().ShowDialog();
 
         }
 
         private void menuTaiKhoan_Click(object sender, EventArgs e)
         {
-            frmMoTaiKhoan f = new frmMoTaiKhoan();
-            f.MdiParent = this;
-            f.StartPosition = FormStartPosition.Manual; // để tự canh giữa
-            f.Location = new Point(0, 0);
-            f.FormBorderStyle = FormBorderStyle.None;   // bỏ viền
-            f.Dock = DockStyle.Fill;                    // 👉 fill toàn vùng MDI
-            f.Show();
-
-            // Resize frmMainMenu để vừa khít form con (nếu cần)
-            this.ClientSize = f.Size;
+            new frmMoTaiKhoan().ShowDialog();
         }
 
         private void frmMainMenu_Load_1(object sender, EventArgs e)
         {
+            Text = "HỆ THỐNG NGÂN HÀNG PHÂN TÁN";
+            lblInfo.Text = $"Người dùng: {Session.LoginName} | Vai trò: {Session.RoleName} | Chi nhánh: {Session.ChiNhanhHienTai}";
 
+            // Ẩn menu theo role
+            menuQuanTri.Visible = RoleHelper.IsNganHang;
+            menuCapNhat.Visible = !RoleHelper.IsKhachHang; // KH không được cập nhật
         }
 
-        private void menuDangXuat_Click(object sender, EventArgs e)
+        private void menuLogout_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show("Bạn có chắc chắn muốn đăng xuất không?",
                                           "Đăng xuất",
@@ -111,16 +99,12 @@ namespace NganHangPhanTan
 
         private void menuThongKe_Click(object sender, EventArgs e)
         {
-            frmThongKe f = new frmThongKe();
-            f.MdiParent = this;
-            f.StartPosition = FormStartPosition.Manual; // để tự canh giữa
-            f.Location = new Point(0, 0);
-            f.FormBorderStyle = FormBorderStyle.None;   // bỏ viền
-            f.Dock = DockStyle.Fill;                    // 👉 fill toàn vùng MDI
-            f.Show();
+            
+        }
 
-            // Resize frmMainMenu để vừa khít form con (nếu cần)
-            this.ClientSize = f.Size;
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
