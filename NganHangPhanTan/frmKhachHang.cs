@@ -16,6 +16,22 @@ namespace NganHangPhanTan
         
         private void frmKhachHang_Load(object sender, EventArgs e)
         {
+            // 🔹 Tự khởi tạo lại kết nối nếu bị mất
+            if (string.IsNullOrEmpty(Session.LoginName))
+            {
+                MessageBox.Show("Vui lòng đăng nhập trước!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.Close();
+                return;
+            }
+
+            // ✅ Kiểm tra quyền
+            string role = RoleHelper.GetCurrentRole();
+            if (role == "None")
+            {
+                MessageBox.Show("Tài khoản không có quyền truy cập!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Close();
+                return;
+            }
             cbPhai.Items.AddRange(new string[] { "Nam", "Nữ" });
             LoadChiNhanhTheoRole();
             LoadKhachHang();

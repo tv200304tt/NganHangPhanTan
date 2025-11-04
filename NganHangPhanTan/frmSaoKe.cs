@@ -25,7 +25,7 @@ namespace NganHangPhanTan
 
         private void frmSaoKe_Load(object sender, EventArgs e)
         {
-            InitializeComponent();
+            
 
         }
 

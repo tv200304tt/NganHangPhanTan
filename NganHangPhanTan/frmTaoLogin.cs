@@ -39,23 +39,62 @@ namespace NganHangPhanTan
         {
             try
             {
-                string dbName = cbDatabase.Enabled ? cbDatabase.SelectedValue.ToString() : null;
+                string login = txtLoginName.Text.Trim();
+                string password = txtPass.Text.Trim();
+                string dbName = cbDatabase.SelectedValue.ToString();
 
-                DB.Exec("sp_TaoLoginMoi",
-                    new SqlParameter("@LoginName", txtLoginName.Text.Trim()),
-                    new SqlParameter("@Password", txtPass.Text.Trim()),
-                    new SqlParameter("@NhomQuyen", cbRole.Text),
-                    new SqlParameter("@DatabaseName", dbName));
+                // ✅ Kiểm tra input
+                if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+                {
+                    MessageBox.Show("⚠️ Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
+                    return;
+                }
 
-                MessageBox.Show("✅ Tạo login thành công!");
+                // ✅ Đảm bảo kết nối tới DB trung tâm
+                if (Connection.currentConn == null || Connection.currentConn.State != ConnectionState.Open)
+                {
+                    bool ok = Connection.ConnectSingle("NGANHANG", Connection.username, Connection.password);
+                    if (!ok)
+                    {
+                        MessageBox.Show("Không thể kết nối tới cơ sở dữ liệu trung tâm (NGANHANG).");
+                        return;
+                    }
+                }
+
+                // ✅ Lấy quyền hiện tại tự động
+                string currentRole = Connection.userRole;
+                if (string.IsNullOrEmpty(currentRole))
+                {
+                    MessageBox.Show("Không xác định được quyền hiện tại. Vui lòng đăng nhập lại.", "Lỗi quyền");
+                    return;
+                }
+
+                // ✅ Gọi stored procedure sp_TaoLoginMoi
+                using (SqlCommand cmd = new SqlCommand("sp_TaoLoginMoi", Connection.currentConn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@LoginName", login);
+                    cmd.Parameters.AddWithValue("@Password", password);
+                    cmd.Parameters.AddWithValue("@NhomQuyen", currentRole);
+                    cmd.Parameters.AddWithValue("@DatabaseName", dbName);
+
+                    cmd.ExecuteNonQuery();
+                }
+
+                MessageBox.Show($"✅ Tạo login thành công!\n→ Role: {currentRole}", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Reset form
+                txtLoginName.Clear();
+                txtPass.Clear();
+                cbDatabase.SelectedIndex = 0;
             }
             catch (SqlException ex)
             {
-                MessageBox.Show("Lỗi SQL: " + ex.Message);
+                MessageBox.Show("❌ Lỗi SQL khi tạo login:\n" + ex.Message, "Lỗi SQL");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tạo login: " + ex.Message);
+                MessageBox.Show("❌ Lỗi tạo login:\n" + ex.Message, "Lỗi hệ thống");
             }
         }
     }

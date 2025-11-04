@@ -1,38 +1,64 @@
 ﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
+using NganHangPhanTan.Core;
 
 namespace NganHangPhanTan
 {
     public static class Connection
     {
-        public static string serverName = @"LAPTOP-VB7EKE79";
+        public static string serverName = @"PC\MSSQLSERVER1";
 
         // 3 database
         public static string dbBenthanh = "NGANHANG_BENTHANH";
         public static string dbTandinh = "NGANHANG_TANDINH";
         public static string dbTonghop = "NGANHANG";
 
-        // Connection hiện tại
-        public static SqlConnection currentConn;
-
-        // Thông tin người đăng nhập
-        public static string username = "";
-        public static string password = "";
-        public static string chiNhanh = "";
-
-        // ✅ THÊM MỚI: Role và thông tin user
-        public static string userRole = "";      // "NganHang", "ChiNhanh", "KhachHang"
-        public static string userCMND = "";      // CMND của khách hàng (nếu là KhachHang)
-        public static string displayRole = "";   // Text hiển thị role
-
-        private static SqlConnection CreateConnection(string db, string user, string pass)
+        // ✅ Connection hiện tại - lấy từ DB.cs
+        public static SqlConnection currentConn
         {
-            string connStr = $"Server={serverName};Database={db};User Id={user};Password={pass};TrustServerCertificate=True;Connection Timeout=30;";
-            return new SqlConnection(connStr);
+            get { return DB.GetCurrentConnection(); }
         }
 
-        // ✅ Kết nối và phát hiện role tự động
+        // ✅ Thông tin người đăng nhập - lấy từ DB.cs
+        public static string username
+        {
+            get { return DB.username; }
+            set { DB.username = value; }
+        }
+
+        public static string password
+        {
+            get { return DB.password; }
+            set { DB.password = value; }
+        }
+
+        public static string chiNhanh
+        {
+            get { return DB.chiNhanh; }
+            set { DB.chiNhanh = value; }
+        }
+
+        // ✅ Role và thông tin user - lấy từ DB.cs
+        public static string userRole
+        {
+            get { return DB.userRole; }
+            set { DB.userRole = value; }
+        }
+
+        public static string userCMND
+        {
+            get { return DB.userCMND; }
+            set { DB.userCMND = value; }
+        }
+
+        public static string displayRole
+        {
+            get { return DB.displayRole; }
+            set { DB.displayRole = value; }
+        }
+
         public static bool ConnectSingle(string chiNhanh, string user, string pass)
         {
             string db = "";
@@ -45,33 +71,21 @@ namespace NganHangPhanTan
 
             try
             {
-                SqlConnection conn = CreateConnection(db, user, pass);
-                conn.Open();
+                // ✅ Sử dụng DB.UseConnection
+                DB.UseConnection(db, user, pass);
 
-                // Lưu thông tin hiện tại
-                currentConn = conn;
-                username = user;
-                password = pass;
-                Connection.chiNhanh = chiNhanh;
-
-                // ✅ PHÁT HIỆN ROLE
+                // ✅ Phát hiện role
                 DetectUserRole();
 
                 return true;
             }
-            catch (SqlException ex)
-            {
-                MessageBox.Show("❌ Không thể kết nối CSDL!\nLý do: " + ex.Message, "Lỗi SQL");
-                return false;
-            }
             catch (Exception ex)
             {
-                MessageBox.Show("❌ Lỗi hệ thống: " + ex.Message, "Lỗi");
+                MessageBox.Show("❌ Lỗi kết nối: " + ex.Message, "Lỗi");
                 return false;
             }
         }
 
-        // ✅ HÀM PHÁT HIỆN ROLE TỰ ĐỘNG
         private static void DetectUserRole()
         {
             try
@@ -85,10 +99,10 @@ namespace NganHangPhanTan
                             ELSE 'None'
                         END AS UserRole";
 
-                using (SqlCommand cmd = new SqlCommand(query, currentConn))
+                DataTable dt = DB.Query(query, CommandType.Text);
+                if (dt.Rows.Count > 0)
                 {
-                    object result = cmd.ExecuteScalar();
-                    userRole = result?.ToString() ?? "None";
+                    userRole = dt.Rows[0]["UserRole"].ToString();
                 }
 
                 // Set display text
@@ -102,7 +116,6 @@ namespace NganHangPhanTan
                         break;
                     case "KhachHang":
                         displayRole = "Khách hàng";
-                        // Lấy CMND từ username (format: KH_1001234567)
                         userCMND = username.Replace("KH_", "").Trim();
                         break;
                     default:
@@ -120,8 +133,7 @@ namespace NganHangPhanTan
 
         public static void CloseConnection()
         {
-            if (currentConn != null && currentConn.State == System.Data.ConnectionState.Open)
-                currentConn.Close();
+            DB.CloseConnection();
         }
 
         public static SqlConnection GetConnectionToChiNhanh(string chiNhanhMoi)
@@ -138,7 +150,6 @@ namespace NganHangPhanTan
             return new SqlConnection(connStr);
         }
 
-        // ✅ Kiểm tra quyền
         public static bool HasPermission(string requiredRole)
         {
             switch (requiredRole)
@@ -148,13 +159,12 @@ namespace NganHangPhanTan
                 case "ChiNhanh":
                     return userRole == "NganHang" || userRole == "ChiNhanh";
                 case "KhachHang":
-                    return true; // Tất cả đều có quyền cơ bản
+                    return true;
                 default:
                     return false;
             }
         }
 
-        // ✅ Format MACN chuẩn (bỏ khoảng trắng thừa)
         public static string GetFormattedMACN(string chiNhanh)
         {
             return chiNhanh.Trim().PadRight(10);

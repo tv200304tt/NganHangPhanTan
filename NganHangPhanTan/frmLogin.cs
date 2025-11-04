@@ -21,28 +21,50 @@ namespace NganHangPhanTan
 
         private void frmLogin_Load(object sender, EventArgs e)
         {
+            // ✅ Load danh sách chi nhánh
             cbChiNhanh.Items.Clear();
-            cbChiNhanh.Items.Add("BENTHANH");
-            cbChiNhanh.Items.Add("TANDINH");
-            cbChiNhanh.Items.Add("NGANHANG");
+            cbChiNhanh.DisplayMember = "Text";
+            cbChiNhanh.ValueMember = "Value";
+            cbChiNhanh.Items.Add(new { Text = "Trung tâm", Value = "NGANHANG" });
+            cbChiNhanh.Items.Add(new { Text = "Bến Thành", Value = "BENTHANH" });
+            cbChiNhanh.Items.Add(new { Text = "Tân Định", Value = "TANDINH" });
+            cbChiNhanh.SelectedIndex = 0;
         }
+        
 
         private void btnLogin_Click(object sender, EventArgs e)
         {
             try
             {
-                var dbKey = cbChiNhanh.SelectedItem.ToString();
-                DB.UseConnection(dbKey, txtUser.Text.Trim(), txtPass.Text);
+                string user = txtUser.Text.Trim();
+                string pass = txtPass.Text.Trim();
+                string chiNhanh = (cbChiNhanh.SelectedItem as dynamic).Value;
 
-                // Test kết nối + lấy role
-                Session.LoginName = txtUser.Text.Trim();
-                Session.RoleName = RoleHelper.GetCurrentRole();
-                Session.ChiNhanhHienTai = dbKey.Replace("NGANHANG_", ""); // hiển thị
+                if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
+                    throw new Exception("Tên người dùng hoặc mật khẩu không thể để trống!");
+
+                // Kết nối tới cơ sở dữ liệu chi nhánh
+                bool connected = Connection.ConnectSingle(chiNhanh, user, pass);
+                if (!connected)
+                    throw new Exception("Không thể kết nối đến cơ sở dữ liệu chi nhánh " + chiNhanh);
+
+                // Cập nhật thông tin đăng nhập và quyền
+                Session.LoginName = user;
+                Session.RoleName = Connection.userRole;
+                Session.ChiNhanhHienTai = chiNhanh;
+                Session.DisplayRole = Connection.displayRole;
 
                 if (Session.RoleName == "None")
-                    throw new Exception("Tài khoản chưa thuộc role nào (NganHang/ChiNhanh/KhachHang).");
+                    throw new Exception("Tài khoản chưa có quyền nào (NganHang / ChiNhanh / KhachHang).");
 
-                // Mở main
+                Connection.username = user;
+                Connection.password = pass;
+                Connection.chiNhanh = chiNhanh;
+
+                MessageBox.Show($"✅ Đăng nhập thành công!\nUser: {user}\nRole: {Session.DisplayRole}",
+                    "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Mở form chính
                 new frmMainMenu().Show();
                 this.Hide();
             }

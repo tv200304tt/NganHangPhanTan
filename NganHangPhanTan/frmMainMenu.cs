@@ -20,6 +20,7 @@ namespace NganHangPhanTan
         private void frmMainMenu_Load(object sender, EventArgs e)
         {
             lblWelcome.Text = $"Xin chào: {Connection.username}  |  Chi nhánh: {Connection.chiNhanh}";
+
         }
         private void thốngKêToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -42,59 +43,63 @@ namespace NganHangPhanTan
             Text = "HỆ THỐNG NGÂN HÀNG PHÂN TÁN";
             lblInfo.Text = $"Người dùng: {Session.LoginName} | Vai trò: {Session.RoleName} | Chi nhánh: {Session.ChiNhanhHienTai}";
 
-            // Ẩn menu theo role
-            menuQuanTri.Visible = RoleHelper.IsNganHang;
-            menuCapNhat.Visible = !RoleHelper.IsKhachHang; // KH không được cập nhật
-        }
+            // Ẩn tất cả trước
+            menuCapNhat.Visible = false;
+            menuThongKe.Visible = false;
+            menuQuanTri.Visible = false;
+            mnuSaoKe.Visible = false;
 
-        private void menuLogout_Click(object sender, EventArgs e)
-        {
-            DialogResult result = MessageBox.Show("Bạn có chắc chắn muốn đăng xuất không?",
-                                          "Đăng xuất",
-                                          MessageBoxButtons.YesNo,
-                                          MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
+            switch (Connection.userRole)
             {
-                // 2️⃣ Ẩn form hiện tại
-                this.Hide();
+                case "NganHang": // admin_nh
+                    menuCapNhat.Visible = true;
+                    menuThongKe.Visible = true;
+                    menuQuanTri.Visible = true;
+                    mnuSaoKe.Visible = true;
+                    break;
 
-                // 3️⃣ Mở lại form đăng nhập
-                frmLogin f = new frmLogin();
-                f.Show();
+                case "ChiNhanh": // chinhanh_bt
+                    menuCapNhat.Visible = true;
+                    menuThongKe.Visible = true;
+                    break;
 
-                // 4️⃣ Đóng form hiện tại (nếu muốn giải phóng tài nguyên)
-                this.Close();
-
+                case "KhachHang":
+                    menuThongKe.Visible = true;
+                    mnuSaoKe.Visible = true;
+                    break;
             }
+
         }
+        private void OpenSubForm(Form form)
+        {
+            form.StartPosition = FormStartPosition.CenterScreen;
+            form.FormBorderStyle = FormBorderStyle.FixedDialog;
+            form.MaximizeBox = false;
+
+            this.Hide(); // ẩn main menu
+
+            // đăng ký sự kiện khi form con đóng
+            form.FormClosed += (s, args) =>
+            {
+                this.Show(); // hiện lại main menu
+                this.WindowState = FormWindowState.Normal;
+                this.Size = new System.Drawing.Size(1024, 720); // đảm bảo kích thước đúng
+                this.CenterToScreen(); // căn giữa lại
+            };
+
+            form.Show();
+        }
+        private void menuLogout_Click(object sender, EventArgs e)
+        { }
 
         private void menuNhanVien_Click(object sender, EventArgs e)
         {
-            frmNhanVien f = new frmNhanVien();
-            f.MdiParent = this;
-            f.StartPosition = FormStartPosition.Manual; // để tự canh giữa
-            f.Location = new Point(0, 0);
-            f.FormBorderStyle = FormBorderStyle.None;   // bỏ viền
-            f.Dock = DockStyle.Fill;                    // 👉 fill toàn vùng MDI
-            f.Show();
-
-            // Resize frmMainMenu để vừa khít form con (nếu cần)
-            this.ClientSize = f.Size;
+            OpenSubForm(new frmNhanVien());
         }
 
         private void menuGiaoDich_Click(object sender, EventArgs e)
         {
-            frmGiaoDichKhach f = new frmGiaoDichKhach();
-            f.MdiParent = this;
-            f.StartPosition = FormStartPosition.Manual; // để tự canh giữa
-            f.Location = new Point(0, 0);
-            f.FormBorderStyle = FormBorderStyle.None;   // bỏ viền
-            f.Dock = DockStyle.Fill;                    // 👉 fill toàn vùng MDI
-            f.Show();
-
-            // Resize frmMainMenu để vừa khít form con (nếu cần)
-            this.ClientSize = f.Size;
+            OpenSubForm(new frmGiaoDichKhach());
         }
 
         private void menuThongKe_Click(object sender, EventArgs e)
@@ -104,7 +109,28 @@ namespace NganHangPhanTan
 
         private void toolStripMenuItem1_Click(object sender, EventArgs e)
         {
+            OpenSubForm(new frmSaoKe());
+        }
 
+        private void mnuBaoCao_Click(object sender, EventArgs e)
+        {
+            OpenSubForm(new frmBaoCaoTaiKhoan());
+        }
+
+        private void mnuKhachHangCN_Click(object sender, EventArgs e)
+        {
+            OpenSubForm(new frmKhachHang());
+        }
+
+        private void menuLogout_Click_1(object sender, EventArgs e)
+        {
+            this.Close();
+            OpenSubForm(new frmLogin());
+        }
+
+        private void qUẢNTRỊToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenSubForm(new frmTaoLogin());
         }
     }
 }

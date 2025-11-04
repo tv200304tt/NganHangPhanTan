@@ -57,7 +57,7 @@ namespace NganHangPhanTan
             this.menuLogout});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(566, 30);
+            this.menuStrip1.Size = new System.Drawing.Size(566, 27);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -70,34 +70,34 @@ namespace NganHangPhanTan
             this.menuGiaoDich});
             this.menuCapNhat.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.menuCapNhat.Name = "menuCapNhat";
-            this.menuCapNhat.Size = new System.Drawing.Size(120, 26);
+            this.menuCapNhat.Size = new System.Drawing.Size(98, 23);
             this.menuCapNhat.Text = "CẬP NHẬT";
             // 
             // menuKhachHang
             // 
             this.menuKhachHang.Name = "menuKhachHang";
-            this.menuKhachHang.Size = new System.Drawing.Size(198, 26);
+            this.menuKhachHang.Size = new System.Drawing.Size(159, 24);
             this.menuKhachHang.Text = "Khách hàng";
             this.menuKhachHang.Click += new System.EventHandler(this.menuKhachHang_Click);
             // 
             // menuTaiKhoan
             // 
             this.menuTaiKhoan.Name = "menuTaiKhoan";
-            this.menuTaiKhoan.Size = new System.Drawing.Size(198, 26);
+            this.menuTaiKhoan.Size = new System.Drawing.Size(159, 24);
             this.menuTaiKhoan.Text = "Mở tài khoản";
             this.menuTaiKhoan.Click += new System.EventHandler(this.menuTaiKhoan_Click);
             // 
             // menuNhanVien
             // 
             this.menuNhanVien.Name = "menuNhanVien";
-            this.menuNhanVien.Size = new System.Drawing.Size(198, 26);
+            this.menuNhanVien.Size = new System.Drawing.Size(159, 24);
             this.menuNhanVien.Text = "Nhân viên";
             this.menuNhanVien.Click += new System.EventHandler(this.menuNhanVien_Click);
             // 
             // menuGiaoDich
             // 
             this.menuGiaoDich.Name = "menuGiaoDich";
-            this.menuGiaoDich.Size = new System.Drawing.Size(198, 26);
+            this.menuGiaoDich.Size = new System.Drawing.Size(159, 24);
             this.menuGiaoDich.Text = "Giao dịch";
             this.menuGiaoDich.Click += new System.EventHandler(this.menuGiaoDich_Click);
             // 
@@ -109,28 +109,30 @@ namespace NganHangPhanTan
             this.mnuKhachHangCN});
             this.menuThongKe.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.menuThongKe.Name = "menuThongKe";
-            this.menuThongKe.Size = new System.Drawing.Size(123, 26);
+            this.menuThongKe.Size = new System.Drawing.Size(101, 23);
             this.menuThongKe.Text = "THỐNG KÊ";
             this.menuThongKe.Click += new System.EventHandler(this.menuThongKe_Click);
             // 
             // mnuSaoKe
             // 
             this.mnuSaoKe.Name = "mnuSaoKe";
-            this.mnuSaoKe.Size = new System.Drawing.Size(314, 26);
+            this.mnuSaoKe.Size = new System.Drawing.Size(245, 24);
             this.mnuSaoKe.Text = "Sao kê tài khoản";
             this.mnuSaoKe.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
             // 
             // mnuBaoCao
             // 
             this.mnuBaoCao.Name = "mnuBaoCao";
-            this.mnuBaoCao.Size = new System.Drawing.Size(314, 26);
+            this.mnuBaoCao.Size = new System.Drawing.Size(245, 24);
             this.mnuBaoCao.Text = "Tài khoản mở theo thời gian";
+            this.mnuBaoCao.Click += new System.EventHandler(this.mnuBaoCao_Click);
             // 
             // mnuKhachHangCN
             // 
             this.mnuKhachHangCN.Name = "mnuKhachHangCN";
-            this.mnuKhachHangCN.Size = new System.Drawing.Size(314, 26);
+            this.mnuKhachHangCN.Size = new System.Drawing.Size(245, 24);
             this.mnuKhachHangCN.Text = "Khách hàng theo chi nhánh";
+            this.mnuKhachHangCN.Click += new System.EventHandler(this.mnuKhachHangCN_Click);
             // 
             // qUẢNTRỊToolStripMenuItem
             // 
@@ -138,28 +140,30 @@ namespace NganHangPhanTan
             this.menuQuanTri});
             this.qUẢNTRỊToolStripMenuItem.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.qUẢNTRỊToolStripMenuItem.Name = "qUẢNTRỊToolStripMenuItem";
-            this.qUẢNTRỊToolStripMenuItem.Size = new System.Drawing.Size(115, 26);
+            this.qUẢNTRỊToolStripMenuItem.Size = new System.Drawing.Size(95, 23);
             this.qUẢNTRỊToolStripMenuItem.Text = "QUẢN TRỊ";
+            this.qUẢNTRỊToolStripMenuItem.Click += new System.EventHandler(this.qUẢNTRỊToolStripMenuItem_Click);
             // 
             // menuQuanTri
             // 
             this.menuQuanTri.Name = "menuQuanTri";
-            this.menuQuanTri.Size = new System.Drawing.Size(224, 26);
+            this.menuQuanTri.Size = new System.Drawing.Size(134, 24);
             this.menuQuanTri.Text = "Tạo login";
             // 
             // menuLogout
             // 
             this.menuLogout.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.menuLogout.Name = "menuLogout";
-            this.menuLogout.Size = new System.Drawing.Size(138, 26);
+            this.menuLogout.Size = new System.Drawing.Size(112, 23);
             this.menuLogout.Text = "ĐĂNG XUẤT";
+            this.menuLogout.Click += new System.EventHandler(this.menuLogout_Click_1);
             // 
             // lblWelcome
             // 
             this.lblWelcome.AutoSize = true;
             this.lblWelcome.Location = new System.Drawing.Point(193, 131);
             this.lblWelcome.Name = "lblWelcome";
-            this.lblWelcome.Size = new System.Drawing.Size(0, 25);
+            this.lblWelcome.Size = new System.Drawing.Size(0, 20);
             this.lblWelcome.TabIndex = 1;
             // 
             // lblInfo
@@ -173,7 +177,7 @@ namespace NganHangPhanTan
             // 
             // frmMainMenu
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.GradientActiveCaption;
             this.ClientSize = new System.Drawing.Size(566, 359);
@@ -181,13 +185,11 @@ namespace NganHangPhanTan
             this.Controls.Add(this.lblWelcome);
             this.Controls.Add(this.menuStrip1);
             this.Font = new System.Drawing.Font("Times New Roman", 13.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.IsMdiContainer = true;
             this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "frmMainMenu";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "frmMainMenu";
-            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.frmMainMenu_Load_1);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
